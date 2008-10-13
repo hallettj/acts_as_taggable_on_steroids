@@ -81,6 +81,22 @@ class Tag < ActiveRecord::Base
     self[:category] = category
     self[:name] = name
   end
+
+  def namespace
+    self[:category]
+  end
+
+  def namespace=(n)
+    self[:category] = n
+  end
+
+  def name_without_namespace
+    self[:name]
+  end
+
+  def name_without_namespace=(n)
+    self[:name] = n
+  end
   
   def to_s
     name
