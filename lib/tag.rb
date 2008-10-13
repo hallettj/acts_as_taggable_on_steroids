@@ -23,9 +23,9 @@ class Tag < ActiveRecord::Base
   end
 
   # Returns a list of all tag categories
-  def self.categories
+  def self.namespaces
     dbh = ActiveRecord::Base.connection
-    rs = dbh.select_all(<<-HERE).first
+    rs = dbh.select_all(<<-HERE)
       select distinct 
         category
       from 
@@ -33,7 +33,7 @@ class Tag < ActiveRecord::Base
       order by
         category
     HERE
-    rs.map { |r| r["category"] }
+    rs.map { |r| r["category"] }.compact
   end
 
   # Given a combined name and category in namespace notation, returns
