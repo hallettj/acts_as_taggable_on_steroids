@@ -41,6 +41,20 @@ module ActiveRecord #:nodoc:
         #   :exclude - Find models that are not tagged with the given tags
         #   :match_all - Find models that match all of the given tags, not just one
         #   :conditions - A piece of SQL conditions to add to the query
+        #
+        # To search for tags within a given category, use namespace
+        # notation. For example,
+        # <tt>find_tagged_with("music:cajun")</tt> will return
+        # instances tagged with the tag "cajun" from the music
+        # category, but not with the tag "cajun" from the food
+        # category unless instances are tagged with both.
+        #
+        # Passing a bare tag will match categories too. So
+        # <tt>find_tagged_with("music")</tt> will return anything
+        # tagged with "music", "music:cajun", "music:rock", and so on.
+        #
+        # A bare tag will not match subtags. For example, "cajun" does
+        # not match "music:cajun".
         def find_tagged_with(*args)
           options = find_options_for_find_tagged_with(*args)
           options.blank? ? [] : find(:all, options)
@@ -52,7 +66,7 @@ module ActiveRecord #:nodoc:
         def find_all_tagged_with(*args)
           find_tagged_with(*args)
         end
-        
+
         def find_options_for_find_tagged_with(tags, options = {})
           tags = tags.is_a?(Array) ? TagList.new(tags.map(&:to_s)) : TagList.from(tags)
           options = options.dup
@@ -73,13 +87,38 @@ module ActiveRecord #:nodoc:
             END
           else
             if options.delete(:match_all)
-              conditions << <<-END
-                (SELECT COUNT(*) FROM #{Tagging.table_name}
-                 INNER JOIN #{Tag.table_name} ON #{Tagging.table_name}.tag_id = #{Tag.table_name}.id
-                 WHERE #{Tagging.table_name}.taggable_type = #{quote_value(base_class.name)} AND
-                 taggable_id = #{table_name}.id AND
-                 #{tags_condition(tags)}) = #{tags.size}
+              # TODO: With the introduction of categories, we can no
+              # longer assume a one-to-one taggings to tags ratio for
+              # each object. If one of the tags in the query has
+              # multiple sub-tags, multiple taggings will be included
+              # for that tag.
+              #
+              # Therefore, this implementation of match_all will not
+              # work in all cases.
+              raise NotImplementedError, "The :match_all option is not currently compatible with namespaced tagging"
+              conditions << sanitize_sql([(<<-END
+                (select
+                   count(*)
+                 from
+                   #{Tagging.table_name} tagging
+                 inner join
+                   #{Tag.table_name} tag on tagging.tag_id = tag.id
+                 where
+                   tagging.tag_id = tag.id and
+                   tagging.taggable_id = #{table_name}.id and
+                   tagging.taggable_type = #{quote_value(base_class.name)} and
+                   #{tags_condition(tags, 'tag')} and
+                   (lower(concat_ws(#{quote_value(Tag.namespace_separator)}, tag.category, tag.name)) in 
+                    (:tag_list) or
+                    lower(tag.category) in (:tag_list))
+                ) = :tag_list_size
               END
+              ),
+              {
+                :tag_list      => tags.map(&:downcase).uniq,
+                :tag_list_size => tags.map(&:downcase).uniq.size
+              }
+            ])
             else
               conditions << tags_condition(tags, tags_alias)
             end
@@ -107,11 +146,13 @@ module ActiveRecord #:nodoc:
         end
 
         # Find how many objects are tagged with a certain tag.
-        def count_by_tag(tag_name)
-          counts = tag_counts(:conditions => "tags.name = #{quote_value(tag_name)}")
+        def count_by_tag(tag, table_name = Tag.table_name)
+          counts = tag_counts(:conditions => tags_condition([tag]))
           counts[0].respond_to?(:count) ? counts[0].count : 0
         end
         
+        # TODO: Do categories break this? Kind of. Appearances of a
+        # subtag don't count toward the count for its category.
         def find_options_for_tag_counts(options = {})
           options.assert_valid_keys :start_at, :end_at, :conditions, :at_least, :at_most, :order, :limit
           options = options.dup
@@ -139,10 +180,10 @@ module ActiveRecord #:nodoc:
           at_least  = sanitize_sql(['COUNT(*) >= ?', options.delete(:at_least)]) if options[:at_least]
           at_most   = sanitize_sql(['COUNT(*) <= ?', options.delete(:at_most)]) if options[:at_most]
           having    = [at_least, at_most].compact.join(' AND ')
-          group_by  = "#{Tag.table_name}.id, #{Tag.table_name}.name HAVING COUNT(*) > 0"
+          group_by  = "#{Tag.table_name}.id, #{Tag.table_name}.category, #{Tag.table_name}.name HAVING COUNT(*) > 0"
           group_by << " AND #{having}" unless having.blank?
           
-          { :select     => "#{Tag.table_name}.id, #{Tag.table_name}.name, COUNT(*) AS count", 
+          { :select     => "#{Tag.table_name}.id, #{Tag.table_name}.category, #{Tag.table_name}.name, COUNT(*) AS count",
             :joins      => joins.join(" "),
             :conditions => conditions,
             :group      => group_by
@@ -155,8 +196,7 @@ module ActiveRecord #:nodoc:
         
        private
         def tags_condition(tags, table_name = Tag.table_name)
-          condition = tags.map { |t| sanitize_sql(["#{table_name}.name LIKE ?", t]) }.join(" OR ")
-          "(" + condition + ")"
+          Tag.tags_condition(tags, table_name)
         end
       end
       

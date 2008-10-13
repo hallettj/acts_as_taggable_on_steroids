@@ -1,8 +1,12 @@
 class ActsAsTaggableMigration < ActiveRecord::Migration
   def self.up
     create_table :tags do |t|
-      t.column :name, :string
+      t.column :category, :string
+      t.column :name,     :string
     end
+
+    add_index :tags, [:category, :name]
+    add_index :tags, :category
     
     create_table :taggings do |t|
       t.column :tag_id, :integer

@@ -2,7 +2,7 @@ require File.dirname(__FILE__) + '/abstract_unit'
 
 class ActsAsTaggableOnSteroidsTest < Test::Unit::TestCase
   fixtures :tags, :taggings, :posts, :users, :photos, :subscriptions, :magazines
-  
+
   def test_find_tagged_with
     assert_equivalent [posts(:jonathan_sky), posts(:sam_flowers)], Post.find_tagged_with('"Very good"')
     assert_equal Post.find_tagged_with('"Very good"'), Post.find_tagged_with(['Very good'])
@@ -341,6 +341,18 @@ class ActsAsTaggableOnSteroidsTest < Test::Unit::TestCase
     end
   ensure
     Tag.destroy_unused = false
+  end
+
+  def test_create_namespaced_tag
+    posts(:jonathan_sky).tag_list << ("music:cajun")
+    posts(:jonathan_sky).save!
+    assert_equal posts(:jonathan_sky), Post.find_tagged_with("music:cajun").first
+  end
+
+  def test_find_by_tag_category
+    posts(:jonathan_sky).tag_list << ("music:cajun")
+    posts(:jonathan_sky).save!
+    assert_equal posts(:jonathan_sky), Post.find_tagged_with("music").first
   end
 end
 

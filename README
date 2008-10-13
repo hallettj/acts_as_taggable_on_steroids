@@ -1,4 +1,4 @@
-= acts_as_taggable_on_steroids
+= acts_as_taggable_on_steroids with namespacing
 
 If you find this plugin useful, please consider a donation to show your support!
 
@@ -8,12 +8,58 @@ If you find this plugin useful, please consider a donation to show your support!
   
 == Instructions
 
-This plugin is based on acts_as_taggable by DHH but includes extras
-such as tests, smarter tag assignment, and tag cloud calculations.
+This is a fork of acts_as_taggable_on_steroids that adds support for
+namespaced tags.
+
+Namespaced tags are a lightweight alternative to tag categories. They
+add structure to your tags without imposing restrictions.
+
+A namespaced tag is just a tag with a specially formed name. An
+example is music:cajun. The namespace prefix, music, makes this tag
+easily distinguishable other tags, like food:cajun.
+
+The namespace is treated like any other tag. And anything that has a
+tag that includes a given namespace is treated as though it is tagged
+with the namespace too. So you can have something tagged with "music"
+and something else tagged with "music:cajun". Calling
+find_tagged_with("music") will return both objects.
+
+Using one namespaced tag gives you more options than using two
+separate tags to provide the same information. For example, you could
+search for Events tagged with "music" and "cajun"; but then you might
+get a bunch of results of events with jazz music and cajun food, which
+clearly isn't what you wanted.
+
+If you hate the colon notation, you can customize the namespace
+separator by setting Tag.namespace_separator. Some ideas for
+alternative notations are "music/cajun" and "music > cajun".
+
+The usage of this plugin differs only slightly from
+acts_as_taggable_on_steroids without namespacing. The plugin maps tag
+queries to namespaces as well as entire tags, and provides some
+database optimization for doing so. But that's about it. You should be
+able to drop this plugin in place of vanilla
+acts_as_taggable_on_steroids without any adjustment - so long as you
+migrate to the new database schema and are not deterred by any of the
+known bugs listed below.
+
+== Known bugs
+
+The :match_all option of the find_tagged_with method is not yet
+supported due to trickiness in writing an appropriate SQL
+query. Passing that option will raise a NotImplementedError.
+
+The behavior of the tag_counts and count_by_tag methods are a bit
+inconsistent with the behavior for searching by tag. If you have one
+object tagged with "music", and another tagged with "music:cajun",
+find_tagged_with("music") will return two objects. But
+count_by_tag("music") will return a count of 1. In other words, an
+appearance of a tag as a namespace prefix doesn't count towards its
+count.
 
 == Installation
 
-  ruby script/plugin install http://svn.viney.net.nz/things/rails/plugins/acts_as_taggable_on_steroids
+  ruby script/plugin install git://github.com/hallettj/acts_as_taggable_on_steroids
 
 == Usage
 
@@ -146,3 +192,5 @@ used to tag any objects. Defaults to false.
 === Other
 
 Problems, comments, and suggestions all welcome. jonathan.viney@gmail.com  
+
+or for namespacing specific problems, comments, or suggestions, contact hallett@gmail.com

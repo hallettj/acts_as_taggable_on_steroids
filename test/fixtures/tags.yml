@@ -1,19 +1,19 @@
 good:
   id: 1
-  name: Very good
+  category: Very good
   
 bad:
   id: 2
-  name: Bad
+  category: Bad
   
 nature:
   id: 3
-  name: Nature
+  category: Nature
   
 question:
   id: 4
-  name: Question
+  category: Question
   
 animal:
   id: 5
-  name: Crazy animal
+  category: Crazy animal
