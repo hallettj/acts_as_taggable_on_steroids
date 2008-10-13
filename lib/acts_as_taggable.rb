@@ -171,8 +171,8 @@ module ActiveRecord #:nodoc:
           end
         end
         
-        def tag_list=(value)
-          @tag_list = TagList.from(value)
+        def tag_list=(tags)
+          @tag_list = tags.is_a?(Array) ? TagList.new(tags.map(&:to_s)) : TagList.from(tags)
         end
         
         def save_cached_tag_list

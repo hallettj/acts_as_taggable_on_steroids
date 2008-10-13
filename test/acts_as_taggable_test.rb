@@ -159,6 +159,16 @@ class ActsAsTaggableOnSteroidsTest < Test::Unit::TestCase
     assert_equivalent ["Bad", "Crazy animal"], photos(:jonathan_bad_cat).tag_list
   end
   
+  def test_assign_string_to_tag_list
+    posts(:jonathan_sky).tag_list = "foo, bar"
+    assert_equal ["foo", "bar"], posts(:jonathan_sky).tag_list
+  end
+
+  def test_assign_array_to_tag_list
+    posts(:jonathan_sky).tag_list = ["foo", "bar"]
+    assert_equal ["foo", "bar"], posts(:jonathan_sky).tag_list    
+  end
+
   def test_reassign_tag_list
     assert_equivalent ["Nature", "Question"], posts(:jonathan_rain).tag_list
     posts(:jonathan_rain).taggings.reload
