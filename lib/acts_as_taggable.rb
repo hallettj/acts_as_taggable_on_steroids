@@ -17,6 +17,12 @@ module ActiveRecord #:nodoc:
           extend ActiveRecord::Acts::Taggable::SingletonMethods
           
           alias_method_chain :reload, :tag_list
+
+          if respond_to?(:named_scope)
+            named_scope(:tagged_with, lambda do |*args|
+                          find_options_for_find_tagged_with(*args)
+                        end)
+          end
         end
         
         def cached_tag_list_column_name
