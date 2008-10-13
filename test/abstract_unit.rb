@@ -17,12 +17,14 @@ Dependencies.load_paths.insert(0, fixture_path)
 require 'active_record/fixtures'
 
 require File.dirname(__FILE__) + '/../lib/acts_as_taggable'
+require_dependency File.dirname(__FILE__) + '/../lib/tag'
+require_dependency File.dirname(__FILE__) + '/../lib/tagging'
 require_dependency File.dirname(__FILE__) + '/../lib/tag_list'
 require_dependency File.dirname(__FILE__) + '/../lib/tags_helper'
 
 ActiveRecord::Base.logger = Logger.new(File.dirname(__FILE__) + '/debug.log')
 ActiveRecord::Base.configurations = YAML::load(IO.read(File.dirname(__FILE__) + '/database.yml'))
-ActiveRecord::Base.establish_connection(ENV['DB'] || 'mysql')
+ActiveRecord::Base.establish_connection(ENV['DB'] || { :adapter => "sqlite3", :dbfile => ":memory:" })
 
 load(File.dirname(__FILE__) + '/schema.rb')
 
