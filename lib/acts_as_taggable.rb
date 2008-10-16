@@ -42,12 +42,12 @@ module ActiveRecord #:nodoc:
         #   :match_all - Find models that match all of the given tags, not just one
         #   :conditions - A piece of SQL conditions to add to the query
         #
-        # To search for tags within a given category, use namespace
+        # To search for tags within a given namespace, use namespace
         # notation. For example,
         # <tt>find_tagged_with("music:cajun")</tt> will return
         # instances tagged with the tag "cajun" from the music
-        # category, but not with the tag "cajun" from the food
-        # category unless instances are tagged with both.
+        # namespace, but not with the tag "cajun" from the food
+        # namespace unless instances are tagged with both.
         #
         # Passing a bare tag will match categories too. So
         # <tt>find_tagged_with("music")</tt> will return anything
@@ -108,9 +108,9 @@ module ActiveRecord #:nodoc:
                    tagging.taggable_id = #{table_name}.id and
                    tagging.taggable_type = #{quote_value(base_class.name)} and
                    #{tags_condition(tags, 'tag')} and
-                   (lower(concat_ws(#{quote_value(Tag.namespace_separator)}, tag.category, tag.name)) in 
+                   (lower(concat_ws(#{quote_value(Tag.namespace_separator)}, tag.namespace, tag.short_name)) in 
                     (:tag_list) or
-                    lower(tag.category) in (:tag_list))
+                    lower(tag.namespace) in (:tag_list))
                 ) = :tag_list_size
               END
               ),
@@ -152,7 +152,7 @@ module ActiveRecord #:nodoc:
         end
         
         # TODO: Do categories break this? Kind of. Appearances of a
-        # subtag don't count toward the count for its category.
+        # subtag don't count toward the count for its namespace.
         def find_options_for_tag_counts(options = {})
           options.assert_valid_keys :start_at, :end_at, :conditions, :at_least, :at_most, :order, :limit
           options = options.dup
@@ -180,10 +180,10 @@ module ActiveRecord #:nodoc:
           at_least  = sanitize_sql(['COUNT(*) >= ?', options.delete(:at_least)]) if options[:at_least]
           at_most   = sanitize_sql(['COUNT(*) <= ?', options.delete(:at_most)]) if options[:at_most]
           having    = [at_least, at_most].compact.join(' AND ')
-          group_by  = "#{Tag.table_name}.id, #{Tag.table_name}.category, #{Tag.table_name}.name HAVING COUNT(*) > 0"
+          group_by  = "#{Tag.table_name}.id, #{Tag.table_name}.namespace, #{Tag.table_name}.short_name HAVING COUNT(*) > 0"
           group_by << " AND #{having}" unless having.blank?
           
-          { :select     => "#{Tag.table_name}.id, #{Tag.table_name}.category, #{Tag.table_name}.name, COUNT(*) AS count",
+          { :select     => "#{Tag.table_name}.id, #{Tag.table_name}.namespace, #{Tag.table_name}.short_name, COUNT(*) AS count",
             :joins      => joins.join(" "),
             :conditions => conditions,
             :group      => group_by
@@ -196,7 +196,15 @@ module ActiveRecord #:nodoc:
         
        private
         def tags_condition(tags, table_name = Tag.table_name)
-          Tag.tags_condition(tags, table_name)
+          condition = tags.map { |tag|
+            namespace, short_name = Tag.namespace_and_short_name_from_tag(tag)
+            if namespace and short_name
+              sanitize_sql(["(#{table_name}.namespace LIKE ? AND #{table_name}.short_name LIKE ?)", namespace, short_name])
+            else
+              sanitize_sql(["#{table_name}.namespace LIKE ?", namespace])
+            end
+          }.join(" OR ")
+          "(" + condition + ")"
         end
       end
       

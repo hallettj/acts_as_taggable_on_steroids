@@ -1,11 +1,11 @@
 ActiveRecord::Schema.define :version => 0 do
   create_table :tags, :force => true do |t|
-    t.column :category, :string
-    t.column :name,     :string
+    t.column :namespace,  :string
+    t.column :short_name, :string
   end
 
-  add_index :tags, [:category, :name]
-  add_index :tags, :category
+  add_index :tags, [:namespace, :short_name]
+  add_index :tags, :namespace
   
   create_table :taggings, :force => true do |t|
     t.column :tag_id, :integer

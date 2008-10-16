@@ -1,19 +1,19 @@
 good:
   id: 1
-  category: Very good
+  namespace: Very good
   
 bad:
   id: 2
-  category: Bad
+  namespace: Bad
   
 nature:
   id: 3
-  category: Nature
+  namespace: Nature
   
 question:
   id: 4
-  category: Question
+  namespace: Question
   
 animal:
   id: 5
-  category: Crazy animal
+  namespace: Crazy animal
